@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Page Replacement Algorithm Simulator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-card: #ffffff;
+      --border: #e5e7eb;
+      --text: #0f172a;
+      --muted: #64748b;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --success: #10b981;
+      --danger: #ef4444;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      padding: 16px;
+      display: flex;
+      justify-content: center;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: var(--text);
+    }
+
+    .app-shell {
+      max-width: 1200px;
+      width: 100%;
+      background: var(--bg-card);
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+      backdrop-filter: blur(10px);
+    }
+
+    header {
+      padding: 24px 28px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .title-block h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      font-size: 0.7rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      margin-top: 6px;
+      opacity: 0.95;
+    }
+
+    .pill {
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .pill-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    main {
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 24px;
+      background: #f9fafb;
+    }
+
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; }
+    }
+
+    .card, .table-wrapper {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+    }
+
+    .card h2, .table-wrapper h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .pill-small {
+      font-size: 0.7rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: var(--primary);
+      border: 1px solid #bfdbfe;
+    }
+
+    .label {
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+
+    input, textarea, select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+      margin-bottom: 12px;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    textarea {
+      min-height: 80px;
+      resize: vertical;
+      font-family: inherit;
+    }
+
+    .hint {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin: -8px 0 12px 0;
+    }
+
+    .code-pill {
+      font-family: monospace;
+      background: #f3f4f6;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
+    button {
+      padding: 10px 18px;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+    }
+
+    .btn-ghost, .btn-outline {
+      background: white;
+      color: var(--text);
+      border: 2px solid var(--border);
+    }
+
+    .btn-ghost:hover, .btn-outline:hover {
+      background: #f9fafb;
+      border-color: var(--primary);
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 16px;
+      padding: 16px;
+      background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+      border-radius: 12px;
+    }
+
+    .summary-item {
+      background: white;
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .summary-label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+
+    .summary-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .summary-value.good { color: var(--success); }
+    .summary-value.bad { color: var(--danger); }
+
+    .summary-chip-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      font-size: 0.75rem;
+      color: var(--primary);
+    }
+
+    .table-wrapper {
+      max-height: 500px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .legend {
+      display: flex;
+      gap: 12px;
+      font-size: 0.8rem;
+      align-items: center;
+    }
+
+    .legend span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #f9fafb;
+      border: 1px solid var(--border);
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .dot.hit { background: var(--success); }
+    .dot.fault { background: var(--danger); }
+
+    .frames-badge {
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: var(--primary);
+      border: 1px solid #bfdbfe;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .table-container {
+      flex: 1;
+      margin-top: 16px;
+      overflow: auto;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    thead {
+      position: sticky;
+      top: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      z-index: 1;
+    }
+
+    th {
+      padding: 12px;
+      color: white;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    td {
+      padding: 12px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+
+    tbody tr:hover {
+      background: #f9fafb;
+    }
+
+    tr.hit-row { background: #ecfdf5; }
+    tr.fault-row { background: #fef2f2; }
+    tr.current-step {
+      background: #dbeafe !important;
+      box-shadow: inset 3px 0 0 var(--primary);
+    }
+
+    .status-pill {
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .status-pill.hit {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .status-pill.fault {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .info-text {
+      text-align: left;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .note-card {
+      grid-column: 1 / -1;
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .note-card h2 {
+      font-size: 1.1rem;
+      margin-bottom: 12px;
+    }
+
+    .note-section-title {
+      font-weight: 600;
+      margin: 12px 0 6px;
+      color: var(--primary);
+    }
+
+    .note-card ul {
+      margin-left: 20px;
+      margin-bottom: 8px;
+    }
+
+    .note-card li {
+      margin-bottom: 4px;
+      line-height: 1.6;
+    }
+
+    footer {
+      padding: 20px 28px;
+      background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+      border-top: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .footer-highlight {
+      color: var(--primary);
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header>
+      <div class="title-block">
+        <h1>
+          <span>🖥️ Page Replacement Simulator</span>
+          <span class="badge">OS Lab Helper</span>
+        </h1>
+        <p class="subtitle">
+          Visualize FIFO, LRU, Optimal, Clock, LFU & Random algorithms step-by-step
+        </p>
+      </div>
+      <div class="pill">
+        <span class="pill-dot"></span>
+        <span>Interactive Simulator</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="card">
+        <h2>
+          ⚙️ Simulation Controls
+          <span class="pill-small" id="algoLabel">LRU</span>
+        </h2>
+
+        <div class="label">Number of Frames</div>
+        <input type="number" id="framesInput" min="1" max="20" value="3" />
+        <div class="hint">Most OS problems use 3–4 frames</div>
+
+        <div class="label">Reference String</div>
+        <textarea id="refInput">7 0 1 2 0 3 0 4 2 3 0 3</textarea>
+        <div class="hint">
+          Example: <code class="code-pill">7 0 1 2 0 3</code>
+        </div>
+
+        <div class="label">Algorithm</div>
+        <select id="algoSelect">
+          <option value="LRU" selected>LRU (Least Recently Used)</option>
+          <option value="FIFO">FIFO (First-In, First-Out)</option>
+          <option value="Optimal">Optimal</option>
+          <option value="Clock">Clock (Second Chance)</option>
+          <option value="LFU">LFU (Least Frequently Used)</option>
+          <option value="Random">Random</option>
+        </select>
+
+        <div class="btn-row">
+          <button class="btn-primary" id="runBtn">▶ Run</button>
+          <button class="btn-ghost" id="randomBtn">🎲 Random</button>
+          <button class="btn-outline" id="resetBtn">⟳ Reset</button>
+        </div>
+
+        <div class="summary-grid" id="summaryGrid" style="display: none;">
+          <div class="summary-item">
+            <div class="summary-label">Requests</div>
+            <div class="summary-value" id="totalReq">0</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">Faults</div>
+            <div class="summary-value bad" id="pageFaults">0</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">Hit Ratio</div>
+            <div class="summary-value good" id="hitRatio">0.00</div>
+          </div>
+        </div>
+
+        <div class="summary-chip-row" id="summaryChips" style="display: none;">
+          <span class="chip" id="algoChip">LRU Algorithm</span>
+        </div>
+      </section>
+
+      <section class="table-wrapper">
+        <h2>📊 Timeline & Frame Table</h2>
+        <div class="legend">
+          <span><span class="dot hit"></span> Hit</span>
+          <span><span class="dot fault"></span> Fault</span>
+          <span class="frames-badge" id="framesBadge">3 Frames</span>
+        </div>
+        <div class="table-container" id="tableContainer">
+          <table>
+            <thead id="tableHead"></thead>
+            <tbody id="tableBody">
+              <tr>
+                <td colspan="8" style="padding: 40px; text-align: center; color: var(--muted);">
+                  👆 Run a simulation to see step-by-step execution
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="note-card">
+        <h2>📖 Quick Guide</h2>
+
+        <div class="note-section-title">English Instructions:</div>
+        <ul>
+          <li><b>Step 1:</b> Enter number of frames (e.g., 3 or 4)</li>
+          <li><b>Step 2:</b> Type reference string (pages with spaces)</li>
+          <li><b>Step 3:</b> Select algorithm from dropdown</li>
+          <li><b>Step 4:</b> Click "Run" button</li>
+          <li><b>Step 5:</b> View results in summary and table</li>
+        </ul>
+
+        <div class="note-section-title">Hindi Instructions:</div>
+        <ul>
+          <li><b>Step 1:</b> Frames ki sankhya likho (jaise 3 ya 4)</li>
+          <li><b>Step 2:</b> Reference string me pages space se likho</li>
+          <li><b>Step 3:</b> Algorithm select karo dropdown se</li>
+          <li><b>Step 4:</b> "Run" button dabao</li>
+          <li><b>Step 5:</b> Result summary aur table me dekho</li>
+        </ul>
+      </section>
+    </main>
+
+    <footer>
+      Made for <span class="footer-highlight">B.Tech OS Lab</span> • 
+      Algorithms: FIFO • LRU • Optimal • Clock • LFU • Random
+    </footer>
+  </div>
+
+  <script>
+
+    const createResult = () => ({
+      snapshots: [],
+      pageFaults: 0,
+      hits: 0,
+      record(timeIdx, frames, isFault, replaced = -1, info = "") {
+        this.snapshots.push({ timeIdx, frames: frames.slice(), isFault, replaced, info });
+        if (isFault) this.pageFaults++;
+        else this.hits++;
+      },
+      hitRatio() {
+        const total = this.pageFaults + this.hits;
+        return total ? this.hits / total : 0;
+      }
+    });
+
+    const parseRef = s =>
+      s.split(/[\s,]+/)
+        .filter(Boolean)
+        .map(Number)
+        .filter(n => !isNaN(n));
+
+    const genRandom = (len = 12, max = 9) =>
+      Array.from({ length: len }, () => Math.floor(Math.random() * (max + 1)));
+
+    const simulate = {
+      FIFO(fc, ref) {
+        const res = createResult(), frames = Array(fc).fill(null), q = [];
+        ref.forEach((p, i) => {
+          const idx = frames.indexOf(p);
+          if (idx !== -1) {
+            res.record(i, frames, false, -1, "Hit");
+            return;
+          }
+          const empty = frames.indexOf(null);
+          if (empty !== -1) {
+            frames[empty] = p; q.push(empty);
+            res.record(i, frames, true, -1, `Placed in frame ${empty}`);
+          } else {
+            const old = q.shift(), rep = frames[old];
+            frames[old] = p; q.push(old);
+            res.record(i, frames, true, rep, `Replaced page ${rep} from frame ${old}`);
+          }
+          
+        });
+        return res;
+      },
+       LRU(fc, ref) {
+        const res = createResult(), frames = Array(fc).fill(null), lastUsed = {};
+        ref.forEach((p, i) => {
+          if (frames.includes(p)) {
+            lastUsed[p] = i;
+            res.record(i, frames, false, -1, "Hit");
+            return;
+          }
+          const empty = frames.indexOf(null);
+          if (empty !== -1) {
+            frames[empty] = p; lastUsed[p] = i;
+            res.record(i, frames, true, -1, `Placed in frame ${empty}`);
+          } else {
+            let lru = frames[0], lruTime = lastUsed[lru] ?? -1;
+            frames.forEach(f => {
+              const t = lastUsed[f] ?? -1;
+              if (t < lruTime) { lruTime = t; lru = f; }
+            });
+            const idx = frames.indexOf(lru);
+            frames[idx] = p; delete lastUsed[lru]; lastUsed[p] = i;
+            res.record(i, frames, true, lru, `Replaced LRU page ${lru}`);
+          }
+        });
+        return res;
+      },      Optimal(fc, ref) {
+        const res = createResult(), frames = Array(fc).fill(null), n = ref.length;
+        ref.forEach((p, i) => {
+          if (frames.includes(p)) {
+            res.record(i, frames, false, -1, "Hit");
+            return;
+          }
+          const empty = frames.indexOf(null);
+          if (empty !== -1) {
+            frames[empty] = p;
+            res.record(i, frames, true, -1, `Placed in frame ${empty}`);
+          } else {
+            const nextUse = {};
+            frames.forEach(f => {
+              nextUse[f] = Infinity;
+              for (let k = i + 1; k < n; k++) {
+                if (ref[k] === f) { nextUse[f] = k; break; }
+              }
+            });
+            let victim = frames[0], far = nextUse[victim];
+            frames.forEach(f => { if (nextUse[f] > far) { far = nextUse[f]; victim = f; } });
+            const idx = frames.indexOf(victim);
+            frames[idx] = p;
+            res.record(i, frames, true, victim, `Replaced ${victim}`);
+          }
+        });
+        return res;
+      },
+    };
+
+    const $ = id => document.getElementById(id);
+    const els = {
+      frames: $('framesInput'),
+      ref: $('refInput'),
+      algo: $('algoSelect'),
+      thead: $('tableHead'),
+      tbody: $('tableBody'),
+      container: $('tableContainer'),
+      summary: $('summaryGrid'),
+      chips: $('summaryChips'),
+      total: $('totalReq'),
+      faults: $('pageFaults'),
+      ratio: $('hitRatio'),
+      algoLabel: $('algoLabel'),
+      algoChip: $('algoChip'),
+      framesBadge: $('framesBadge')
+    };
+
+    const algoDesc = {
+      FIFO: "Replaces oldest page",
+      LRU: "Least Recently Used (coming soon)",
+      Optimal: "Optimal replacement (coming soon)",
+      Clock: "Clock / Second chance (coming soon)",
+      LFU: "Least Frequently Used (coming soon)",
+      Random: "Random replacement (coming soon)"
+    };
+
+    const render = (fc, ref, algo, result) => {
+      els.thead.innerHTML = "";
+      els.tbody.innerHTML = "";
+
+      const hrow = document.createElement('tr');
+      ['Step', 'Page', ...Array.from({ length: fc }, (_, i) => `F${i}`), 'Status', 'Info']
+        .forEach(t => {
+          const th = document.createElement('th');
+          th.textContent = t;
+          hrow.appendChild(th);
+        });
+      els.thead.appendChild(hrow);
+
+      result.snapshots.forEach((s, idx) => {
+        const tr = document.createElement('tr');
+        tr.className = s.isFault ? 'fault-row' : 'hit-row';
+
+        [idx + 1, ref[s.timeIdx], ...s.frames.map(f => f === null ? '-' : f)].forEach(val => {
+          const td = document.createElement('td');
+          td.textContent = val;
+          tr.appendChild(td);
+        });
+
+        const statusTd = document.createElement('td');
+        const pill = document.createElement('span');
+        pill.className = `status-pill ${s.isFault ? 'fault' : 'hit'}`;
+        pill.textContent = s.isFault ? 'FAULT' : 'HIT';
+        statusTd.appendChild(pill);
+        tr.appendChild(statusTd);
+
+        const infoTd = document.createElement('td');
+        infoTd.className = 'info-text';
+        infoTd.textContent = s.info;
+        tr.appendChild(infoTd);
+
+        els.tbody.appendChild(tr);
+      });
+
+      const rows = els.tbody.querySelectorAll('tr');
+      if (rows.length) rows[rows.length - 1].classList.add('current-step');
+      els.container.scrollTop = els.container.scrollHeight;
+
+      els.total.textContent = result.snapshots.length;
+      els.faults.textContent = result.pageFaults;
+      els.ratio.textContent = result.hitRatio().toFixed(2);
+
+      els.summary.style.display = 'grid';
+      els.chips.style.display = 'flex';
+      els.algoLabel.textContent = algo;
+      els.algoChip.textContent = algoDesc[algo] || `${algo} Algorithm`;
+      els.framesBadge.textContent = `${fc} Frames`;
+    };
+
+    const run = () => {
+      const fc = Number(els.frames.value);
+      if (!Number.isInteger(fc) || fc <= 0) {
+        alert("Invalid frame count");
+        return;
+      }
+      const ref = parseRef(els.ref.value);
+      if (!ref.length) {
+        alert("Enter reference string");
+        return;
+      }
+      const algo = els.algo.value;
+
+      if (!simulate[algo]) {
+        alert(`${algo} algorithm will be implemented in later commits.`);
+        return;
+      }
+      const result = simulate[algo](fc, ref);
+      render(fc, ref, algo, result);
+    };
+
+    const reset = () => {
+      els.frames.value = 3;
+      els.ref.value = "7 0 1 2 0 3 0 4 2 3 0 3";
+      els.algo.value = "LRU";
+      els.algoLabel.textContent = "LRU";
+      els.algoChip.textContent = algoDesc["LRU"];
+      els.summary.style.display = 'none';
+      els.chips.style.display = 'none';
+      els.framesBadge.textContent = "3 Frames";
+      els.thead.innerHTML = "";
+      els.tbody.innerHTML =
+        '<tr><td colspan="8" style="padding: 40px; text-align: center; color: var(--muted);">👆 Run a simulation to see step-by-step execution</td></tr>';
+    };
+
+    $('runBtn').onclick = run;
+    $('randomBtn').onclick = () => {
+      els.ref.value = genRandom().join(' ');
+    };
+    $('resetBtn').onclick = reset;
+    els.algo.onchange = () => {
+      els.algoLabel.textContent = els.algo.value;
+      els.algoChip.textContent = algoDesc[els.algo.value] || `${els.algo.value} Algorithm`;
+    };
+ 
+
+  </script>
+</body>
+</html>
